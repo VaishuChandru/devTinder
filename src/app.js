@@ -5,6 +5,17 @@ console.log(app.use);
 app.listen(3000, () => {
   console.log("Server is started and listening on 3000");
 });
+//req with query params
+app.get("/user", (req, res) => {
+  const ID = req.query.id;
+  const NAME = req.query.name;
+  res.send(`Deatils of Id: ${ID},Name: ${NAME}`);
+});
+//dynamic routes
+app.get("/products/:id", (req, res) => {
+  const PRODUCTNAME = req.params.id;
+  res.send(`Deatils product Name: ${PRODUCTNAME}`);
+});
 
 app.get("/user", (req, res) => {
   res.send({ firstname: "vaishnavi", lastname: "Chandrasekaran" });
