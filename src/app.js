@@ -1,79 +1,98 @@
 const express = require("express");
 const { adminauth } = require("./Middlewares/auth");
+const { connectDB } = require("./config/database");
+const { User } = require("./Models/user");
 const app = express();
-console.log(app.use);
 
-app.listen(3000, () => {
-  console.log("Server is started and listening on 3000");
-});
-/*
-app.use("/employee", (req, res, next) => {
-  if ("b" === "a") {
-    console.log("authenticated sucecssfully");
-    next();
-  } else {
-    res.status(403).send("forbidden");
+app.use(express.json());
+connectDB()
+  .then(() => {
+    console.log("connected to db successfully");
+    app.listen(3000, () => {
+      console.log("server is listeming on 3000");
+    });
+  })
+  .catch((err) => {
+    console.error("Sorry, not able to connect to database");
+  });
+
+//singup API
+app.post("/signup", async (req, res) => {
+  const user = new User(req.body);
+  try {
+    const savedUser = await user.save();
+    if (savedUser === user) {
+      res.send("User has been added successfully");
+    } else {
+      res
+        .status(500)
+        .send(
+          "An error occurred, please pass all the required fields like mailid, firstname, password"
+        );
+    }
+  } catch (err) {
+    res.send(`Error occurred: ${err} `);
   }
-});*/
-app.use(
-  "/employee/details",
-  adminauth,
-  [
-    (req, res, next) => {
-      console.log("executed 1st handler");
-      //res.send("response has been sent from first handler function");
-      next();
-    },
-  ],
-  (req, res, next) => {
-    console.log("executed 2nd handler");
-    throw new Error("error occurred");
-    //res.send("response has been sent from second handler function");
+});
+
+//get a user using a mailid
+app.get("/user", async (req, res) => {
+  try {
+    const user = await User.findOne({ emailId: req.body.emailId });
+    if (!user) {
+      res.status(404).send("No such user is found on the database");
+    } else {
+      res.send(user);
+    }
+  } catch (err) {
+    res.status(500).send(`Error occurred: ${err}`);
   }
-);
-
-/*
-//req with query params
-app.get("/user", (req, res) => {
-  const ID = req.query.id;
-  const NAME = req.query.name;
-  res.send(`Deatils of Id: ${ID},Name: ${NAME}`);
-});
-//dynamic routes
-app.get("/products/:id", (req, res) => {
-  const PRODUCTNAME = req.params.id;
-  res.send(`Deatils product Name: ${PRODUCTNAME}`);
 });
 
-app.get("/user", (req, res) => {
-  res.send({ firstname: "vaishnavi", lastname: "Chandrasekaran" });
-});
-app.post("/user", (req, res) => {
-  res.send("User information has been added successfully");
-});
-app.put("/user", (req, res) => {
-  res.send("User data has been updated succesfully");
-});
-app.patch("/user", (req, res) => {
-  res.send("user's contact number has been updated successfully");
-});
-app.delete("/user", (req, res) => {
-  res.send("user has been removed form the application");
-});
-app.use("/test", (req, res) => {
-  res.send("Hello from express server(test route)- test nodemon");
-});
-app.use("/hello", (req, res) => {
-  res.send("Hello from express server(hello route)- test nodemon");
+//Feep API - Get all the users from collection
+app.get("/feed", async (req, res) => {
+  //const data = JSON.stringify(await User.find());
+  try {
+    const users = await User.find({});
+    if (users.length > 0) {
+      res.send(users);
+    } else {
+      res.status(404).send("No users found");
+    }
+  } catch (err) {
+    res.status(500).send(`Error occurred: ${err}`);
+  }
 });
 
-app.use("/", (req, res) => {
-  res.send("hello from express erver(root path)-test nodemon");
+//update user details
+app.patch("/user", async (req, res) => {
+  try {
+    const updatedUser = await User.findOneAndUpdate(
+      { emailId: req.body.emailId },
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (updatedUser) {
+      res.send("User info has been updated succesfully");
+    } else {
+      res.status(500).send("Update failed");
+    }
+  } catch (err) {
+    res.status(500).send(`Error occurred: ${err}`);
+  }
 });
-*/
-app.use("/", (err, req, res, next) => {
-  if (err) {
-    res.status(500).send("error occurred- sending from response");
+
+app.delete("/user", async (req, res) => {
+  try {
+    const mailId = req.body.emailId;
+    const deletedUser = await User.deleteOne({ emailId: mailId });
+    if (deletedUser.deletedCount == 0) {
+      res.status(404).send("No such user exist");
+    } else if (deletedUser.deletedCount == 1) {
+      res.send("User has been deleted successfully");
+    }
+  } catch (err) {
+    res.status(500).send(`Error occured ${err}`);
   }
 });
 
