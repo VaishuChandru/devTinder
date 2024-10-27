@@ -2,6 +2,8 @@ const express = require("express");
 const { adminauth } = require("./Middlewares/auth");
 const { connectDB } = require("./config/database");
 const { User } = require("./Models/user");
+const { validateSignUp } = require("./utils/validation");
+const bcrypt = require("bcrypt");
 const app = express();
 
 app.use(express.json());
@@ -9,7 +11,7 @@ connectDB()
   .then(() => {
     console.log("connected to db successfully");
     app.listen(3000, () => {
-      console.log("server is listeming on 3000");
+      console.log("server is listening on 3000");
     });
   })
   .catch((err) => {
@@ -18,23 +20,41 @@ connectDB()
 
 //singup API
 app.post("/signup", async (req, res) => {
-  const user = new User(req.body);
   try {
-    const savedUser = await user.save();
-    if (savedUser === user) {
-      res.send("User has been added successfully");
-    } else {
-      res
-        .status(500)
-        .send(
-          "An error occurred, please pass all the required fields like mailid, firstname, password"
-        );
-    }
+    validateSignUp(req);
+    const { firstName, lastName, emailId, passWord } = req.body;
+    const passwordHash = await bcrypt.hash(passWord, 10);
+    const user = new User({
+      firstName,
+      lastName,
+      emailId,
+      passWord: passwordHash,
+    });
+    await user.save();
+    res.send("User has been added successfully");
   } catch (err) {
-    res.send(`Error occurred: ${err} `);
+    res.status(400).send(`Error occurred: ${err} `);
   }
 });
 
+app.post("/login", async (req, res) => {
+  const { emailId, passWord } = req.body;
+  try {
+    const user = await User.findOne({ emailId: emailId });
+    if (!user) {
+      throw new Error("Invalid Credentails");
+    } else {
+      const isValidPassWord = await bcrypt.compare(passWord, user.passWord);
+      if (!isValidPassWord) {
+        throw new Error("Invalid Credentails");
+      } else {
+        res.send("Logged in successfully");
+      }
+    }
+  } catch (err) {
+    res.status(400).send("Error occurred:" + err);
+  }
+});
 //get a user using a mailid
 app.get("/user", async (req, res) => {
   try {
