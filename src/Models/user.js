@@ -1,6 +1,7 @@
 const { timeStamp } = require("console");
 const mongoose = require("mongoose");
 const { type } = require("os");
+const validator = require("validator");
 const userSchema = new mongoose.Schema(
   {
     firstName: {
@@ -26,6 +27,11 @@ const userSchema = new mongoose.Schema(
       trim: true,
       required: true,
       unique: true,
+      validate(value) {
+        if (!validator.isEmail(value)) {
+          throw new Error("Not a valid email");
+        }
+      },
     },
     passWord: {
       type: String,
@@ -56,6 +62,11 @@ const userSchema = new mongoose.Schema(
     photoUrl: {
       type: String,
       default: "https://pngtree.com/freepng/default-male-avatar_5939655.html",
+      validate(value) {
+        if (!validator.isURL(value)) {
+          throw new Error("Invalid photo URL" + value);
+        }
+      },
     },
     about: {
       type: String,

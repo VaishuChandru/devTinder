@@ -65,10 +65,21 @@ app.get("/feed", async (req, res) => {
 });
 
 //update user details
-app.patch("/user", async (req, res) => {
+app.patch("/user/:emailId", async (req, res) => {
   try {
+    //users are allowed to update age,about,photo and skills
+    const ALLOWED_UPDATES = ["age", "about", "photoUrl", "skills"];
+    if (req.body?.skills?.length > 10) {
+      throw new Error("Can't add more than 10 skills");
+    }
+    const isUpdateAllowed = Object.keys(req.body).every((k) =>
+      ALLOWED_UPDATES.includes(k)
+    );
+    if (!isUpdateAllowed) {
+      throw new Error("Update not allowed");
+    }
     const updatedUser = await User.findOneAndUpdate(
-      { emailId: req.body.emailId },
+      { emailId: req.params.emailId },
       req.body,
       { new: true, runValidators: true }
     );
@@ -106,5 +117,5 @@ once a request is responsded, its done. we can't respond again to the request.
  *Request handler can be put inside an array app.use("/route",[RH1,RH2,RH3],RH4,RH5);
  *midddle ware => the piece which needs to be executed fro multiple routes ,(avoids code duplication)
  * adding a / route at the end i.e(aap.use('/',(err,req,tes,next))) will be helpful in handling the errors and returning a meangingful msg to end users
- * Improve update api 
+ * Improve update api  
  */
