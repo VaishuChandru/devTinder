@@ -4,9 +4,13 @@ const { connectDB } = require("./config/database");
 const { User } = require("./Models/user");
 const { validateSignUp } = require("./utils/validation");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
+const { userAuth } = require("./Middlewares/auth");
 const app = express();
 
 app.use(express.json());
+app.use(cookieParser());
 connectDB()
   .then(() => {
     console.log("connected to db successfully");
@@ -45,24 +49,45 @@ app.post("/login", async (req, res) => {
       throw new Error("Invalid Credentails");
     } else {
       const isValidPassWord = await bcrypt.compare(passWord, user.passWord);
-      if (!isValidPassWord) {
-        throw new Error("Invalid Credentails");
-      } else {
+      if (isValidPassWord) {
+        const token = jwt.sign({ _id: user._id }, "Dev@Tinder@123", {
+          expiresIn: "1d",
+        });
+        res.cookie("token", token, {
+          expires: new Date(Date.now() + 1 * 3600000),
+        });
         res.send("Logged in successfully");
+      } else {
+        throw new Error("Invalid Credentails");
       }
     }
   } catch (err) {
     res.status(400).send("Error occurred:" + err);
   }
 });
+
+app.get("/profile", userAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    console.log(user);
+    res.send(user);
+  } catch (err) {
+    res.status(400).send(`Error occurred: ${err}`);
+  }
+});
+
+app.post("/sendConnectionRequest", userAuth, async (req, res) => {
+  console.log("sending connection Request");
+  res.send(req.user.firstName + " sent connection Request");
+});
 //get a user using a mailid
 app.get("/user", async (req, res) => {
   try {
     const user = await User.findOne({ emailId: req.body.emailId });
-    if (!user) {
-      res.status(404).send("No such user is found on the database");
-    } else {
+    if (user) {
       res.send(user);
+    } else {
+      res.status(404).send("No such user is found on the database");
     }
   } catch (err) {
     res.status(500).send(`Error occurred: ${err}`);
@@ -70,7 +95,7 @@ app.get("/user", async (req, res) => {
 });
 
 //Feep API - Get all the users from collection
-app.get("/feed", async (req, res) => {
+app.get("/feed", userAuth, async (req, res) => {
   //const data = JSON.stringify(await User.find());
   try {
     const users = await User.find({});
