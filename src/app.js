@@ -48,12 +48,9 @@ app.post("/login", async (req, res) => {
     if (!user) {
       throw new Error("Invalid Credentails");
     } else {
-      const isValidPassWord = await bcrypt.compare(passWord, user.passWord);
+      const isValidPassWord = user.validatePassword(passWord);
       if (isValidPassWord) {
-        const token = jwt.sign({ _id: user._id }, "Dev@Tinder@123", {
-          expiresIn: "1d",
-        });
-        res.cookie("token", token, {
+        res.cookie("token", await user.getJWT(), {
           expires: new Date(Date.now() + 1 * 3600000),
         });
         res.send("Logged in successfully");
