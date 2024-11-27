@@ -30,7 +30,7 @@ authRouter.post("/login", async (req, res) => {
     if (!user) {
       throw new Error("Invalid Credentails");
     } else {
-      const isValidPassWord = user.validatePassword(passWord);
+      const isValidPassWord = await user.validatePassword(passWord);
       if (isValidPassWord) {
         res.cookie("token", await user.getJWT(), {
           expires: new Date(Date.now() + 1 * 3600000),
@@ -43,6 +43,13 @@ authRouter.post("/login", async (req, res) => {
   } catch (err) {
     res.status(400).send("Error occurred:" + err);
   }
+});
+
+authRouter.post("/logout", async (req, res) => {
+  res.clearCookie("token");
+  res.json({
+    message: `You are logged out successfully`,
+  });
 });
 
 module.exports = { authRouter };
